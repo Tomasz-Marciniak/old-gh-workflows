@@ -37,6 +37,30 @@ jobs:
 
 The referenced workflow in this respository must be configured with `on: workflow_call`.
 
+### Release
+
+This repository uses [release-please-action](https://github.com/googleapis/release-please-action) as a separate pipeline that reacts on merge to the main branch to automate versioning and changelog generation.
+
+### 🔐 Authentication Note
+
+This project currently uses the default `GITHUB_TOKEN` for GitHub Actions authentication, as it provides short-lived, repository-scoped credentials and is the recommended approach for most automation scenarios.
+
+However, `GITHUB_TOKEN` has an important limitation: actions performed with it (such as creating pull requests or releases) do **not** trigger additional workflows. This is an intentional safeguard by GitHub to prevent recursive executions.
+
+For use cases that require workflow chaining (e.g. triggering CI from automated release pull requests), this project also supports using a **Personal Access Token (PAT)** or a **GitHub App**. While PATs are simpler to set up, GitHub Apps are the preferred long-term solution for secure and auditable automation.
+
+### Troubleshooting
+
+**Error:** release-please failed: GitHub Actions is not permitted to create or approve pull requests
+
+**Cause:** The workflow lacks permission to create or approve PRs.
+
+**Solution:**
+1. Go to repository Settings → Actions → General → Workflow permissions.
+2. Enable "Allow GitHub Actions to create and approve pull requests."
+
+**Note:** Using a Personal Access Token (PAT) is possible but **not recommended** for bot actions due to security and auditing reasons.
+
 ## Background
 
 Maintaining consistent CI/CD and automation across multiple repositories is challenging and error-prone. 

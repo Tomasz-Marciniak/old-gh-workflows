@@ -1,0 +1,47 @@
+name: Test GH Workflows
+
+on:
+  push:
+    tags:
+      - v*.*.*
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
+
+jobs:
+  test-java-app-ci-with-gradle:
+    uses: ./.github/workflows/java-app-ci-with-gradle.yml
+    with:
+      pre-build-hook: |
+        cp -R workflows-ci/docker ./
+        cp -r workflows-ci/gradle/* .
+      docker-registry: ghcr.io
+      docker-image-name: ${{ github.repository }}
+    secrets:
+      DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+  test-java-lib-ci-with-gradle:
+    uses: ./.github/workflows/java-lib-ci-with-gradle.yml
+    with:
+      pre-build-hook: |
+        cp -R workflows-ci/docker ./
+        cp -r workflows-ci/gradle/* .
+        cp -r version.properties gradle.properties
+      java-version: '21'
+    secrets:
+      MAVEN_REPOSITORY_USERNAME: github-app
+      MAVEN_REPOSITORY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-node-js-app-ci-with-npm:
+    uses: ./.github/workflows/node-js-app-ci-with-npm.yml
+    with:
+      pre-build-hook: |
+        cp -R workflows-ci/docker ./
+        cp -r workflows-ci/npm/* .
+      docker-registry: ghcr.io
+      docker-image-name: ${{ github.repository }}
+    secrets:
+      DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
