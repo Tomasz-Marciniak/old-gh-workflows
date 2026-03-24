@@ -1,0 +1,72 @@
+name: Java Library CI with Gradle
+
+on:
+  workflow_call:
+    inputs:
+      pre-build-hook:
+        required: false
+        type: string
+      java-version:
+        required: false
+        type: string
+        default: '21'
+    secrets:
+      MAVEN_REPOSITORY_USERNAME:
+        required: false
+      MAVEN_REPOSITORY_TOKEN:
+        required: true
+
+jobs:
+  gradle-build:
+    name: 🐘 Gradle build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: ⬇️ Checkout
+        uses: actions/checkout@v4
+
+      - name: ⚡ Pre-build script
+        if: ${{ inputs['pre-build-hook'] != '' }}
+        run: ${{ inputs['pre-build-hook'] }}
+
+      - name: ♻️ Cache build
+        id: cache-build
+        uses: actions/cache@v4
+        with:
+          path: ./build
+          key: ${{ github.run_id }}
+
+      - name: 🔋 Set up Graal VM ${{ inputs.java-version }}
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: ${{ inputs.java-version }}
+          distribution: 'graalvm'
+          cache: gradle
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔧 Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: 📦 Run build
+        run: ./gradlew build
+
+      - name: 🗜️ Archive reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-${{ github.workflow }}-${{ github.run_id }}-${{ job.check_run_id }}
+          path: ./build/reports
+
+      - name: ⬆️ Prepare version
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: sed -i 's/^version=.*/&-SNAPSHOT/' gradle.properties
+
+      - name: ⬆️ Publish package
+        run: ./gradlew publish
+        env:
+          MAVEN_REPOSITORY_USERNAME: ${{ secrets.MAVEN_REPOSITORY_USERNAME || '_' }}
+          MAVEN_REPOSITORY_TOKEN: ${{ secrets.MAVEN_REPOSITORY_TOKEN }}

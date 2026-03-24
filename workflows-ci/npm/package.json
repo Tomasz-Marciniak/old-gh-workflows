@@ -1,0 +1,15 @@
+{
+  "name": "app-starter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+  },
+  "scripts": {
+    "dev": "echo dev",
+    "test": "echo ..",
+    "dist": "echo dist",
+    "lint": "echo lint",
+    "preview": "echo preview"
+  }
+}

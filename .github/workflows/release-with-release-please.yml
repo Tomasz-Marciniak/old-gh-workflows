@@ -1,0 +1,50 @@
+name: Release with Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: ▶️ Run
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔐 Select token
+        id: auth
+        run: |
+          if [ -n "${{ secrets.GH_CODE_BOT_APP_ID }}" ] && [ -n "${{ secrets.GH_CODE_BOT_APP_PRIVATE_KEY }}" ]; then
+            echo "mode=app" >> $GITHUB_OUTPUT
+          else
+            echo "mode=pat" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate GitHub App token
+        id: app-token
+        if: ${{ steps.auth.outputs.mode == 'app' }}
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.GH_CODE_BOT_APP_ID }}
+          private-key: ${{ secrets.GH_CODE_BOT_APP_PRIVATE_KEY }}
+
+      - name: 🔑 Resolve final token
+        id: token
+        run: |
+          if [ "${{ steps.auth.outputs.mode }}" = "app" ]; then
+            echo "token=${{ steps.app-token.outputs.token }}" >> $GITHUB_OUTPUT
+            echo "Using GitHub App token"
+          else
+            echo "token=${{ secrets.RELEASE_PLEASE_TOKEN }}" >> $GITHUB_OUTPUT
+            echo "Using PAT token"
+          fi
+
+      - name: 🚚 Prepare release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ steps.token.outputs.token }}
