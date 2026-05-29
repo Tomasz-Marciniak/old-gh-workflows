@@ -1,0 +1,8 @@
+---
+- name: Dummy Playbook
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Hello World
+      debug:
+        msg: "Hello from dummy playbook"

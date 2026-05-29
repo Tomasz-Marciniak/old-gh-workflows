@@ -1,0 +1,124 @@
+name: Ansible Run
+
+on:
+  workflow_call:
+    inputs:
+      playbook:
+        required: true
+        type: string
+      inventory:
+        required: true
+        type: string
+      ansible_user:
+        required: false
+        type: string
+        default: root
+      ansible_config:
+        required: false
+        type: string
+        default: ansible.cfg
+      ansible_requirements:
+        required: false
+        type: string
+        default: requirements.yml
+      pre-build-hook:
+        required: false
+        type: string
+      python-version:
+        required: false
+        type: string
+        default: "3.13"
+      requirements-file:
+        required: false
+        type: string
+        default: requirements.txt
+      environment:
+        required: false
+        type: string
+
+    secrets:
+      SSH_PRIVATE_KEY:
+        required: false
+      ANSIBLE_VAULT_PASSWORD:
+        required: false
+
+jobs:
+  ansible:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: 🔍 Checkout caller repo
+        uses: actions/checkout@v4
+
+      - name: ⚡ Pre-build script
+        if: ${{ inputs['pre-build-hook'] != '' }}
+        run: ${{ inputs['pre-build-hook'] }}
+
+      - name: ⚙️ Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
+
+      - name: 🔑 Setup SSH
+        run: |
+          eval "$(ssh-agent -s)"
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
+
+      - name: 🔐 Configure Ansible Vault
+        env:
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+        run: |
+          if [ -n "$ANSIBLE_VAULT_PASSWORD" ]; then
+            echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > vault.pass
+            echo "ANSIBLE_VAULT_PASSWORD_FILE=$PWD/vault.pass" >> $GITHUB_ENV
+          fi
+
+      - name: 📦 Install dependencies
+        run: |
+          if [ -f "${{ inputs.requirements-file }}" ]; then
+            pip install -r "${{ inputs.requirements-file }}"
+          else
+            pip install ansible
+          fi
+
+      - name: 🔍 Checkout workflow repo (matcher only)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          sparse-checkout: |
+            .github/matchers/problem-matcher.json
+          sparse-checkout-cone-mode: false
+          path: .github/gh-workflows-kit
+
+      - name: 🔍 Register Ansible Problem Matcher
+        run: echo "::add-matcher::.github/gh-workflows-kit/.github/matchers/problem-matcher.json"
+
+      - name: ⚙️ Setup Ansible environment
+        env:
+          ANSIBLE_CONFIG: ${{ inputs.ansible_config }}
+        run: |
+          if [ -f "${{ inputs.ansible_requirements }}" ]; then
+            COLLECTIONS_PATH=".ansible/collections"
+
+            ansible-galaxy collection install \
+              -r "${{ inputs.ansible_requirements }}" \
+              -p "$COLLECTIONS_PATH"
+          fi
+
+      - name: ⚡ Run Ansible Playbook
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+          ANSIBLE_CONFIG: ${{ inputs.ansible_config }}
+        run: |
+          ansible-playbook \
+            -i "${{ inputs.inventory }}" \
+            -u "${{ inputs.ansible_user }}" \
+            "${{ inputs.playbook }}"
+
+      - name: 🔍 Remove Ansible Problem Matcher
+        if: always()
+        run: echo "::remove-matcher owner=ansible-error::"

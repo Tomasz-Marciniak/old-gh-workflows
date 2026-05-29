@@ -1,0 +1,78 @@
+name: Test GH Workflows
+
+on:
+  push:
+    tags:
+      - v*.*.*
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
+
+jobs:
+  test-setup:
+    runs-on: ubuntu-latest
+    outputs:
+      ssh_private_key: ${{ steps.keygen.outputs.private_key }}
+    steps:
+      - name: Generate random SSH key
+        id: keygen
+        run: |
+          ssh-keygen -t rsa -b 4096 -f /tmp/ssh_key -N "" >/dev/null
+          {
+            echo "private_key<<EOF"
+            cat /tmp/ssh_key
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  test-java-app-gradle:
+    needs: test-setup
+    uses: ./.github/workflows/java-app-gradle.yml
+    with:
+      pre-build-hook: |
+        cp -R mocks/docker ./
+        cp -r mocks/gradle/* .
+      docker-registry: ghcr.io
+      docker-image-name: ${{ github.repository }}
+    secrets:
+      DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+  test-java-lib-gradle:
+    needs: test-setup
+    uses: ./.github/workflows/java-lib-gradle.yml
+    with:
+      pre-build-hook: |
+        cp -R mocks/docker ./
+        cp -r mocks/gradle/* .
+        cp -r version.properties gradle.properties
+      java-version: '21'
+    secrets:
+      MAVEN_REPOSITORY_USERNAME: github-app
+      MAVEN_REPOSITORY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-nodejs-app-npm:
+    needs: test-setup
+    uses: ./.github/workflows/nodejs-app-npm.yml
+    with:
+      pre-build-hook: |
+        cp -R mocks/docker ./
+        cp -r mocks/npm/* .
+      docker-registry: ghcr.io
+      docker-image-name: ${{ github.repository }}
+    secrets:
+      DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+  test-ansible:
+    needs: test-setup
+    uses: ./.github/workflows/ansible.yml
+    with:
+      pre-build-hook: |
+        touch requirements.txt
+      playbook: mocks/ansible/playbooks/bootstrap.yml
+      inventory: mocks/ansible/inventories/bootstrap.yml
+      ansible_requirements: mocks/ansible/requirements.yaml
+      ansible_user: root
+    secrets:
+      SSH_PRIVATE_KEY: ${{ needs.test-setup.outputs.ssh_private_key }}
