@@ -28,7 +28,6 @@ tasks {
     }
 }
 
-
 publishing {
     publications {
         create<MavenPublication>("maven") {
@@ -38,7 +37,7 @@ publishing {
     repositories {
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/upfera/gh-workflows")
+            url = uri("https://maven.pkg.github.com/${System.getenv("GITHUB_REPOSITORY")}")
             credentials {
                 username = System.getenv("MAVEN_REPOSITORY_USERNAME")
                 password = System.getenv("MAVEN_REPOSITORY_TOKEN")

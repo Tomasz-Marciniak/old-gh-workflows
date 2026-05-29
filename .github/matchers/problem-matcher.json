@@ -1,0 +1,14 @@
+{
+  "problemMatcher": [
+    {
+      "owner": "ansible-error",
+      "severity": "error",
+      "pattern": [
+        {
+          "regexp": "^Error: (.+)$",
+          "message": 1
+        }
+      ]
+    }
+  ]
+}
