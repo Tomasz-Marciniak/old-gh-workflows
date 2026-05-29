@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0 (2026-05-29)
+
+## What's Changed
+* feature: add ansible workflow by @Tomasz-Marciniak in https://github.com/upfera/gh-workflows/pull/3
+
+
+**Full Changelog**: https://github.com/upfera/gh-workflows/compare/v1.0.0...v1.1.0
+
 ## 1.0.0 (2026-03-24)
 
 ## What's Changed
