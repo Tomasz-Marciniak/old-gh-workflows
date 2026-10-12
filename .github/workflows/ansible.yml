@@ -55,11 +55,30 @@ jobs:
         if: ${{ inputs['pre-build-hook'] != '' }}
         run: ${{ inputs['pre-build-hook'] }}
 
-      - name: ⚙️ Set up Python
+      - name: 🔎 Find pip dependency file
+        id: pip-dependencies
+        env:
+          REQUIREMENTS_FILE: ${{ inputs.requirements-file }}
+        run: |
+          if [ -f "$REQUIREMENTS_FILE" ]; then
+            echo "path=$REQUIREMENTS_FILE" >> "$GITHUB_OUTPUT"
+          elif [ -f pyproject.toml ]; then
+            echo "path=pyproject.toml" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: ⚙️ Set up Python with pip cache
+        if: steps.pip-dependencies.outputs.path != ''
         uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
           cache: pip
+          cache-dependency-path: ${{ steps.pip-dependencies.outputs.path }}
+
+      - name: ⚙️ Set up Python without pip cache
+        if: steps.pip-dependencies.outputs.path == ''
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
 
       - name: 🔑 Setup SSH
         run: |
