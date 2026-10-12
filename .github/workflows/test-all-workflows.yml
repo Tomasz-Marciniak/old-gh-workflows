@@ -68,6 +68,7 @@ jobs:
     needs: test-setup
     uses: ./.github/workflows/ansible.yml
     with:
+      pre-build-hook: test ! -f requirements.txt && test ! -f pyproject.toml
       playbook: mocks/ansible/playbooks/bootstrap.yml
       inventory: mocks/ansible/inventories/bootstrap.yml
       ansible_requirements: mocks/ansible/requirements.yaml
