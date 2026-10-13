@@ -64,12 +64,23 @@ jobs:
     secrets:
       DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
-  test-ansible:
+  test-ansible-no-pip-requirements:
     needs: test-setup
     uses: ./.github/workflows/ansible.yml
     with:
-      pre-build-hook: |
-        touch requirements.txt
+      pre-build-hook: test ! -f requirements.txt && test ! -f pyproject.toml
+      playbook: mocks/ansible/playbooks/bootstrap.yml
+      inventory: mocks/ansible/inventories/bootstrap.yml
+      ansible_requirements: mocks/ansible/requirements.yaml
+      ansible_user: root
+    secrets:
+      SSH_PRIVATE_KEY: ${{ needs.test-setup.outputs.ssh_private_key }}
+
+  test-ansible-pip-requirements:
+    needs: test-setup
+    uses: ./.github/workflows/ansible.yml
+    with:
+      pre-build-hook: echo ansible > requirements.txt
       playbook: mocks/ansible/playbooks/bootstrap.yml
       inventory: mocks/ansible/inventories/bootstrap.yml
       ansible_requirements: mocks/ansible/requirements.yaml

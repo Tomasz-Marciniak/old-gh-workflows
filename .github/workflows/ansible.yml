@@ -55,11 +55,14 @@ jobs:
         if: ${{ inputs['pre-build-hook'] != '' }}
         run: ${{ inputs['pre-build-hook'] }}
 
-      - name: ⚙️ Set up Python
+      - name: ⚙️  Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
-          cache: pip
+          cache: ${{ hashFiles(inputs.requirements-file, 'pyproject.toml') != '' && 'pip' || '' }}
+          cache-dependency-path: |
+            ${{ inputs.requirements-file }}
+            pyproject.toml
 
       - name: 🔑 Setup SSH
         run: |
